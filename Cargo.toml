@@ -1,0 +1,13 @@
+[package]
+name = "oqpq"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.82"
+arrow = "56.1.0"
+clap = { version = "4.5.4", features = ["derive"] }
+comfy-table = "7.1.1"
+orc-rust = "0.6.3"
+parquet = "56.1.0"
+serde_json = "1.0.117"
