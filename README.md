@@ -27,6 +27,9 @@ A fast and efficient command-line tool for viewing, inspecting, and querying ORC
 
 ### Advanced Features
 - **Column Selection** - Choose specific columns for better performance and focused analysis
+  - Supports top-level columns only (e.g., `name`, `age`, `address`)
+  - Nested field selection (e.g., `address.city`) is not currently supported
+  - Complex nested structures are returned as complete objects
 - **Streaming Processing** - Memory-efficient handling of large files
 - **Auto-detection** - Automatic file type and compression format detection
 
@@ -79,6 +82,12 @@ opq view --file data.parquet --fields "id,name,email" --limit 10
 
 # Single column selection
 opq view --file data.parquet --fields "name" --format vertical --limit 5
+
+# Select nested structures as complete objects
+opq view --file nested_data.parquet --fields "id,address,metadata" --limit 5
+
+# Note: Nested field selection like "address.city" is not supported
+# Use the full nested structure instead
 ```
 
 ### Output Format Examples
@@ -167,8 +176,15 @@ opq view --file dataset.parquet --fields "id,name,email" --format ndjson --limit
 
 OPQ handles complex nested data structures including:
 - Primitive types (integers, floats, strings, booleans)
-- Nested structs
+- Nested structs (returned as complete objects)
 - Arrays and lists
+- Maps and dictionaries
+- Timestamp and date types
+
+### Column Selection Limitations
+- **Supported**: Top-level column selection (`id`, `name`, `address`)
+- **Not supported**: Nested field paths (`address.city`, `metadata.preferences.theme`)
+- **Workaround**: Select the entire nested structure and use post-processing tools
 - Maps and dictionaries
 - Timestamp and date types
 
