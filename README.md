@@ -161,9 +161,36 @@ OPQ handles complex nested data structures including:
 ## Performance
 
 - **Fast startup** - Optimized for quick data inspection
-- **Memory efficient** - Streams data without loading entire files
+- **Memory efficient** - Streams data without loading entire files into memory
+- **Large file support** - Handles multi-GB files efficiently
 - **Compression aware** - Automatic decompression without temporary files
 - **Arrow-based** - Uses Apache Arrow for unified data processing
+
+### Large File Handling
+
+OPQ is designed to handle large files efficiently:
+
+#### ✅ **Uncompressed Files (Recommended for large datasets)**
+- **Streaming processing** - Only loads data as needed
+- **Memory usage** - Constant memory usage regardless of file size
+- **5GB+ files** - No memory issues, processes in batches
+
+#### ⚠️ **Compressed Files (Memory considerations)**
+- **Memory requirement** - Decompressed file size + processing overhead
+- **5GB compressed file** - May require 6-8GB available memory
+- **Recommendation** - For very large files, use uncompressed format when possible
+
+#### 💡 **Best Practices for Large Files**
+```bash
+# Check file size and metadata first
+opq meta --file large_dataset.parquet
+
+# Preview small sample before processing large amounts
+opq view --file large_dataset.parquet --limit 10
+
+# For very large files, consider using limit parameter
+opq view --file huge_file.parquet --limit 1000 --format ndjson > sample.jsonl
+```
 
 ## Requirements
 

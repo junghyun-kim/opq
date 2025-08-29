@@ -78,15 +78,23 @@ pub fn get_file_type(file_path: &str) -> Result<FileType> {
 }
 
 pub struct ArrowBatchIterator {
-    batches: Vec<RecordBatch>,
-    current_index: usize,
+    reader: Box<dyn Iterator<Item = Result<RecordBatch>>>,
 }
 
 impl ArrowBatchIterator {
-    pub fn new(batches: Vec<RecordBatch>) -> Self {
+    pub fn new_from_batches(batches: Vec<RecordBatch>) -> Self {
+        let iter = batches.into_iter().map(Ok);
         Self {
-            batches,
-            current_index: 0,
+            reader: Box::new(iter),
+        }
+    }
+
+    pub fn new_from_parquet_reader(
+        reader: impl Iterator<Item = arrow::error::Result<RecordBatch>> + 'static,
+    ) -> Self {
+        let iter = reader.map(|batch| batch.map_err(Error::new));
+        Self {
+            reader: Box::new(iter),
         }
     }
 }
@@ -95,13 +103,7 @@ impl Iterator for ArrowBatchIterator {
     type Item = Result<RecordBatch>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.current_index < self.batches.len() {
-            let batch = self.batches[self.current_index].clone();
-            self.current_index += 1;
-            Some(Ok(batch))
-        } else {
-            None
-        }
+        self.reader.next()
     }
 }
 
@@ -130,20 +132,16 @@ pub fn read_parquet_to_arrow(file_path: &str) -> Result<ArrowBatchIterator> {
 
     match compression {
         CompressionType::None => {
-            // Read uncompressed file directly
+            // Read uncompressed file directly - streaming
             let file = File::open(&path).map_err(Error::new)?;
             let builder = ParquetRecordBatchReaderBuilder::try_new(file).map_err(Error::new)?;
             let reader = builder.build().map_err(Error::new)?;
 
-            let mut batches = Vec::new();
-            for batch_result in reader {
-                batches.push(batch_result.map_err(Error::new)?);
-            }
-
-            Ok(ArrowBatchIterator::new(batches))
+            Ok(ArrowBatchIterator::new_from_parquet_reader(reader))
         }
         _ => {
-            // For compressed files, we need to decompress first and create a temporary buffer
+            // For compressed files, we still need to decompress to memory
+            // This is a limitation of current Parquet/ORC libraries
             let mut decompressed_reader = create_decompressed_reader(file_path)?;
             let mut buffer = Vec::new();
             decompressed_reader
@@ -154,12 +152,7 @@ pub fn read_parquet_to_arrow(file_path: &str) -> Result<ArrowBatchIterator> {
             let builder = ParquetRecordBatchReaderBuilder::try_new(bytes).map_err(Error::new)?;
             let reader = builder.build().map_err(Error::new)?;
 
-            let mut batches = Vec::new();
-            for batch_result in reader {
-                batches.push(batch_result.map_err(Error::new)?);
-            }
-
-            Ok(ArrowBatchIterator::new(batches))
+            Ok(ArrowBatchIterator::new_from_parquet_reader(reader))
         }
     }
 }
@@ -174,7 +167,7 @@ pub fn read_orc_to_arrow(file_path: &str) -> Result<ArrowBatchIterator> {
 
     match compression {
         CompressionType::None => {
-            // Read uncompressed file directly
+            // Read uncompressed file directly - still need to collect for ORC
             let file = File::open(&path).map_err(Error::new)?;
             let reader_builder = ArrowReaderBuilder::try_new(file).map_err(Error::new)?;
             let mut reader = reader_builder.build();
@@ -189,7 +182,7 @@ pub fn read_orc_to_arrow(file_path: &str) -> Result<ArrowBatchIterator> {
                 batches.push(batch);
             }
 
-            Ok(ArrowBatchIterator::new(batches))
+            Ok(ArrowBatchIterator::new_from_batches(batches))
         }
         _ => {
             // For compressed files, we need to decompress first and create a temporary buffer
@@ -213,7 +206,7 @@ pub fn read_orc_to_arrow(file_path: &str) -> Result<ArrowBatchIterator> {
                 batches.push(batch);
             }
 
-            Ok(ArrowBatchIterator::new(batches))
+            Ok(ArrowBatchIterator::new_from_batches(batches))
         }
     }
 }
