@@ -20,6 +20,7 @@ fn main() -> Result<()> {
             columns,
             limit,
             format,
-        } => handle_view_command(file, columns, *limit, format),
+            truncate,
+        } => handle_view_command(file, columns, *limit, format, *truncate),
     }
 }

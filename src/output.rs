@@ -3,6 +3,7 @@ use arrow::array::Array;
 use arrow::json::writer::LineDelimitedWriter;
 use arrow::record_batch::RecordBatch;
 use clap::ValueEnum;
+use comfy_table::{Table, Cell};
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum OutputFormat {
@@ -103,6 +104,7 @@ pub fn print_arrow_batches(
     batch_iterator: impl Iterator<Item = Result<RecordBatch>>,
     limit: usize,
     format: &OutputFormat,
+    truncate: usize,
 ) -> Result<()> {
     match format {
         OutputFormat::Table => {
@@ -126,10 +128,7 @@ pub fn print_arrow_batches(
             }
 
             if !all_batches.is_empty() {
-                println!(
-                    "{}",
-                    arrow::util::pretty::pretty_format_batches(&all_batches).map_err(Error::new)?
-                );
+                print_table_with_truncate(&all_batches, truncate)?;
             }
         }
         OutputFormat::Vertical => {
@@ -189,5 +188,43 @@ pub fn print_arrow_batches(
         }
     }
 
+    Ok(())
+}
+
+fn print_table_with_truncate(batches: &[RecordBatch], truncate_len: usize) -> Result<()> {
+    let mut table = Table::new();
+
+    if batches.is_empty() {
+        return Ok(());
+    }
+
+    let schema = batches[0].schema();
+    
+    // Add header row
+    let mut header = Vec::new();
+    for field in schema.fields() {
+        header.push(Cell::new(field.name()));
+    }
+    table.set_header(header);
+
+    // Add data rows
+    for batch in batches {
+        for row_idx in 0..batch.num_rows() {
+            let mut row = Vec::new();
+            for (col_idx, _column) in batch.columns().iter().enumerate() {
+                let column = batch.column(col_idx);
+                let value = format_array_value(column.as_ref(), row_idx);
+                let truncated_value = if truncate_len > 0 && value.len() > truncate_len {
+                    format!("{}...", &value[..truncate_len])
+                } else {
+                    value
+                };
+                row.push(Cell::new(truncated_value));
+            }
+            table.add_row(row);
+        }
+    }
+
+    println!("{table}");
     Ok(())
 }

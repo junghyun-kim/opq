@@ -47,5 +47,8 @@ pub enum Commands {
         /// Output format
         #[arg(short, long, value_enum, default_value_t = OutputFormat::Table)]
         format: OutputFormat,
+        /// Truncate long column values (0 to disable, default: disabled)
+        #[arg(short, long, default_value_t = 0)]
+        truncate: usize,
     },
 }

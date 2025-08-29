@@ -36,6 +36,7 @@ pub fn handle_view_command(
     columns: &Option<Vec<String>>,
     limit: usize,
     format: &OutputFormat,
+    truncate: usize,
 ) -> Result<()> {
     let file_type = get_file_type(file)?;
     let batches = match file_type {
@@ -48,6 +49,6 @@ pub fn handle_view_command(
         OutputFormat::Ndjson => crate::output::OutputFormat::Ndjson,
     };
 
-    print_arrow_batches(batches, limit, &output_format)?;
+    print_arrow_batches(batches, limit, &output_format, truncate)?;
     Ok(())
 }
