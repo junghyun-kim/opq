@@ -287,7 +287,7 @@ pub fn read_orc_to_arrow_with_projection(
 
 use parquet::file::reader::{FileReader, SerializedFileReader};
 
-pub fn get_parquet_schema(file_path: &str) -> Result<()> {
+pub fn get_parquet_schema(file_path: &str) -> Result<String> {
     let path = Path::new(file_path);
     if !path.exists() {
         return Err(anyhow::Error::msg(format!("File not found: {}", file_path)));
@@ -302,8 +302,7 @@ pub fn get_parquet_schema(file_path: &str) -> Result<()> {
             let reader = SerializedFileReader::new(file).map_err(Error::new)?;
             let metadata = reader.metadata();
             let schema = metadata.file_metadata().schema();
-            println!("{:#?}", schema);
-            Ok(())
+            Ok(format!("{:#?}", schema))
         }
         _ => {
             // For compressed files, decompress first
@@ -317,13 +316,12 @@ pub fn get_parquet_schema(file_path: &str) -> Result<()> {
             let reader = SerializedFileReader::new(bytes).map_err(Error::new)?;
             let metadata = reader.metadata();
             let schema = metadata.file_metadata().schema();
-            println!("{:#?}", schema);
-            Ok(())
+            Ok(format!("{:#?}", schema))
         }
     }
 }
 
-pub fn get_orc_schema(file_path: &str) -> Result<()> {
+pub fn get_orc_schema(file_path: &str) -> Result<String> {
     let path = Path::new(file_path);
     if !path.exists() {
         return Err(anyhow::Error::msg(format!("File not found: {}", file_path)));
@@ -337,8 +335,7 @@ pub fn get_orc_schema(file_path: &str) -> Result<()> {
             let file = File::open(&path).map_err(Error::new)?;
             let reader_builder = ArrowReaderBuilder::try_new(file).map_err(Error::new)?;
             let schema = reader_builder.schema();
-            println!("{:#?}", schema);
-            Ok(())
+            Ok(format!("{:#?}", schema))
         }
         _ => {
             // For compressed files, decompress first
@@ -351,8 +348,7 @@ pub fn get_orc_schema(file_path: &str) -> Result<()> {
             let bytes = Bytes::from(buffer);
             let reader_builder = ArrowReaderBuilder::try_new(bytes).map_err(Error::new)?;
             let schema = reader_builder.schema();
-            println!("{:#?}", schema);
-            Ok(())
+            Ok(format!("{:#?}", schema))
         }
     }
 }
