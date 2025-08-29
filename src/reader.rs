@@ -1,5 +1,6 @@
 use anyhow::{Error, Result};
 use arrow::record_batch::RecordBatch;
+use arrow_schema::Schema as ArrowSchema;
 use bytes::Bytes;
 use flate2::read::{GzDecoder, ZlibDecoder};
 use orc_rust::arrow_reader::ArrowReaderBuilder;
@@ -287,6 +288,36 @@ pub fn read_orc_to_arrow_with_projection(
 
 use parquet::file::reader::{FileReader, SerializedFileReader};
 
+pub fn get_parquet_arrow_schema(file_path: &str) -> Result<ArrowSchema> {
+    let path = Path::new(file_path);
+    if !path.exists() {
+        return Err(anyhow::Error::msg(format!("File not found: {}", file_path)));
+    }
+
+    let compression = detect_compression_from_extension(file_path);
+
+    match compression {
+        CompressionType::None => {
+            // Read uncompressed file directly
+            let file = File::open(&path).map_err(Error::new)?;
+            let builder = ParquetRecordBatchReaderBuilder::try_new(file).map_err(Error::new)?;
+            Ok(builder.schema().as_ref().clone())
+        }
+        _ => {
+            // For compressed files, decompress first
+            let mut decompressed_reader = create_decompressed_reader(file_path)?;
+            let mut buffer = Vec::new();
+            decompressed_reader
+                .read_to_end(&mut buffer)
+                .map_err(Error::new)?;
+
+            let bytes = Bytes::from(buffer);
+            let builder = ParquetRecordBatchReaderBuilder::try_new(bytes).map_err(Error::new)?;
+            Ok(builder.schema().as_ref().clone())
+        }
+    }
+}
+
 pub fn get_parquet_schema(file_path: &str) -> Result<String> {
     let path = Path::new(file_path);
     if !path.exists() {
@@ -349,6 +380,38 @@ pub fn get_orc_schema(file_path: &str) -> Result<String> {
             let reader_builder = ArrowReaderBuilder::try_new(bytes).map_err(Error::new)?;
             let schema = reader_builder.schema();
             Ok(format!("{:#?}", schema))
+        }
+    }
+}
+
+pub fn get_orc_arrow_schema(file_path: &str) -> Result<ArrowSchema> {
+    let path = Path::new(file_path);
+    if !path.exists() {
+        return Err(anyhow::Error::msg(format!("File not found: {}", file_path)));
+    }
+
+    let compression = detect_compression_from_extension(file_path);
+
+    match compression {
+        CompressionType::None => {
+            // Read uncompressed file directly
+            let file = File::open(&path).map_err(Error::new)?;
+            let reader_builder = ArrowReaderBuilder::try_new(file).map_err(Error::new)?;
+            let schema = reader_builder.schema();
+            Ok(schema.as_ref().clone())
+        }
+        _ => {
+            // For compressed files, decompress first
+            let mut decompressed_reader = create_decompressed_reader(file_path)?;
+            let mut buffer = Vec::new();
+            decompressed_reader
+                .read_to_end(&mut buffer)
+                .map_err(Error::new)?;
+
+            let bytes = Bytes::from(buffer);
+            let reader_builder = ArrowReaderBuilder::try_new(bytes).map_err(Error::new)?;
+            let schema = reader_builder.schema();
+            Ok(schema.as_ref().clone())
         }
     }
 }

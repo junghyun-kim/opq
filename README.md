@@ -17,15 +17,18 @@ A fast and efficient command-line tool for viewing, inspecting, and querying ORC
 
 ### Output Formats
 - **Table** - Pretty-printed table format (default)
-- **Vertical** - MySQL-style vertical format (great for wide tables)
 - **NDJSON** - Newline-delimited JSON format
 
+Note: Vertical format has been removed. Use table format for structured output or NDJSON for data export.
+
 ### Commands
-- **schema** - View file schema and structure
-- **meta** - View file metadata and statistics
+- **schema** - View file schema and structure with tree visualization support
+- **metadata** - View file metadata and statistics 
 - **view** - View file contents with customizable output formats and column selection
 
 ### Advanced Features
+- **Tree Schema Visualization** - Hierarchical display of complex nested structures
+- **Multiple File Support** - Process multiple files with schema and metadata commands
 - **Column Selection** - Choose specific columns for better performance and focused analysis
   - Supports top-level columns only (e.g., `name`, `age`, `address`)
   - Nested field selection (e.g., `address.city`) is not currently supported
@@ -51,43 +54,54 @@ The binary will be available at `target/release/opq`.
 #### View Schema
 ```bash
 # View schema of an ORC file
-opq schema --file data.orc
+opq schema data.orc
 
-# View schema of a compressed Parquet file
-opq schema --file data.parquet.gz
+# View schema of a compressed Parquet file in tree format
+opq schema data.parquet.gz --format tree
+
+# View schema of multiple files
+opq schema data1.parquet data2.orc samples/*.parquet
+
+# Tree format shows hierarchical structure for nested data
+opq schema nested_data.parquet --format tree
 ```
 
 #### View Metadata
 ```bash
 # View metadata of a Parquet file
-opq meta --file data.parquet
+opq metadata data.parquet
+
+# View metadata of multiple files
+opq metadata data.parquet data.orc samples/*.parquet
 
 # View metadata of a compressed ORC file
-opq meta --file data.orc.zst
+opq metadata data.orc.zst
 ```
 
 #### View Data Content
 ```bash
 # View first 10 rows in table format (default)
-opq view --file data.parquet
+opq view data.parquet
 
-# View first 20 rows in vertical format
-opq view --file data.orc --limit 20 --format vertical
+# View first 20 rows
+opq view data.orc --limit 20
 
 # Export to NDJSON format
-opq view --file data.parquet.gz --format ndjson --limit 100
+opq view data.parquet.gz --format ndjson --limit 100
 
 # Select specific columns for better performance
-opq view --file data.parquet --fields "id,name,email" --limit 10
+opq view data.parquet --columns "id,name,email" --limit 10
 
 # Single column selection
-opq view --file data.parquet --fields "name" --format vertical --limit 5
+opq view data.parquet --columns "name" --limit 5
 
 # Select nested structures as complete objects
-opq view --file nested_data.parquet --fields "id,address,metadata" --limit 5
+opq view nested_data.parquet --columns "id,address,metadata" --limit 5
 
-# Note: Nested field selection like "address.city" is not supported
-# Use the full nested structure instead
+# Note: view command processes one file at a time
+# For multiple files, use separate commands:
+# opq view file1.parquet --limit 5
+# opq view file2.orc --limit 5
 ```
 
 ### Output Format Examples
@@ -102,22 +116,23 @@ opq view --file nested_data.parquet --fields "id,address,metadata" --limit 5
 +-------------+----------+--------+-------------------------+
 ```
 
-#### Vertical Format
+#### Tree Schema Format
 ```
-*************************** 1 ***************************
-PassengerId: 1
-   Survived: 0
-     Pclass: 3
-       Name: Braund, Mr. Owen Harris
-        Sex: male
-        Age: 22.0
-*************************** 2 ***************************
-PassengerId: 2
-   Survived: 1
-     Pclass: 1
-       Name: Cumings, Mrs. John Bradley (Florence Briggs Thayer)
-        Sex: female
-        Age: 38.0
+Schema Tree (parquet):
+└── root
+    ├── id: INT64
+    ├── name: UTF8
+    ├── address: STRUCT
+    │   ├── street: UTF8
+    │   ├── city: UTF8
+    │   └── coordinates: STRUCT
+    │       ├── lat: FLOAT64
+    │       └── lng: FLOAT64
+    └── metadata: STRUCT
+        ├── created_at: UTF8
+        └── preferences: STRUCT
+            ├── theme: UTF8
+            └── language: UTF8
 ```
 
 #### NDJSON Format
@@ -141,52 +156,70 @@ OPQ automatically detects compression based on file extensions:
 
 ### Working with Compressed Files
 ```bash
-# Schema of gzip-compressed Parquet
-opq schema --file sales_data.parquet.gz
+# Schema of gzip-compressed Parquet with tree view
+opq schema sales_data.parquet.gz --format tree
 
 # Metadata of zstd-compressed ORC
-opq meta --file logs.orc.zst
+opq metadata logs.orc.zst
 
-# View snappy-compressed data in vertical format
-opq view --file user_events.parquet.snappy --format vertical --limit 5
+# View snappy-compressed data
+opq view user_events.parquet.snappy --limit 5
 ```
 
 ### Data Exploration Workflow
 ```bash
-# 1. Check the schema first
-opq schema --file dataset.parquet
+# 1. Check the schema first with tree visualization
+opq schema dataset.parquet --format tree
 
 # 2. View metadata for size info
-opq meta --file dataset.parquet
+opq metadata dataset.parquet
 
 # 3. Preview data in table format
-opq view --file dataset.parquet --limit 10
+opq view dataset.parquet --limit 10
 
 # 4. Select specific columns for analysis
-opq view --file dataset.parquet --fields "user_id,timestamp,event_type" --limit 20
+opq view dataset.parquet --columns "user_id,timestamp,event_type" --limit 20
 
-# 5. For wide tables, use vertical format
-opq view --file dataset.parquet --format vertical --limit 3
+# 5. Export sample to JSON for further processing
+opq view dataset.parquet --columns "id,name,email" --format ndjson --limit 1000 > sample.jsonl
+```
 
-# 6. Export sample to JSON for further processing
-opq view --file dataset.parquet --fields "id,name,email" --format ndjson --limit 1000 > sample.jsonl
+### Working with Multiple Files
+```bash
+# View schema of multiple files
+opq schema data/*.parquet --format tree
+
+# Check metadata for all ORC files in a directory
+opq metadata logs/*.orc
+
+# Process multiple files with the same command
+opq schema samples/sample_parquet_1/titanic.parquet samples/sample_orc_2/iris.orc
+
+# Note: view command only supports one file at a time
+# For viewing multiple files, run separate commands:
+for file in data/*.parquet; do
+  echo "=== Processing $file ==="
+  opq view "$file" --limit 5
+done
 ```
 
 ## Supported Data Types
 
 OPQ handles complex nested data structures including:
 - Primitive types (integers, floats, strings, booleans)
-- Nested structs (returned as complete objects)
+- Nested structs with hierarchical tree visualization
 - Arrays and lists
 - Maps and dictionaries
 - Timestamp and date types
+
+### Schema Visualization
+- **Raw format**: Shows native schema representation
+- **Tree format**: Hierarchical visualization perfect for understanding nested structures
 
 ### Column Selection Limitations
 - **Supported**: Top-level column selection (`id`, `name`, `address`)
 - **Not supported**: Nested field paths (`address.city`, `metadata.preferences.theme`)
 - **Workaround**: Select the entire nested structure and use post-processing tools
-- Maps and dictionaries
-- Timestamp and date types
 
 ## Performance
 
@@ -213,13 +246,16 @@ OPQ is designed to handle large files efficiently:
 #### 💡 **Best Practices for Large Files**
 ```bash
 # Check file size and metadata first
-opq meta --file large_dataset.parquet
+opq metadata large_dataset.parquet
 
 # Preview small sample before processing large amounts
-opq view --file large_dataset.parquet --limit 10
+opq view large_dataset.parquet --limit 10
+
+# View schema with tree format to understand structure
+opq schema large_dataset.parquet --format tree
 
 # For very large files, consider using limit parameter
-opq view --file huge_file.parquet --limit 1000 --format ndjson > sample.jsonl
+opq view huge_file.parquet --limit 1000 --format ndjson > sample.jsonl
 ```
 
 ## Requirements
@@ -240,6 +276,15 @@ opq view --file huge_file.parquet --limit 1000 --format ndjson > sample.jsonl
 [Add your license information here]
 
 ## Changelog
+
+### v0.2.0
+- **Breaking Changes**: Simplified CLI interface - removed `--file` flag, files are now positional arguments
+- **New Feature**: Tree schema visualization with `--format tree`
+- **New Feature**: Multiple file support for schema and metadata commands
+- **Enhancement**: Arrow-based unified schema processing for consistent output
+- **Enhancement**: Improved nested structure support with proper hierarchical display
+- **Removed**: Vertical output format (use table format instead)
+- **Fixed**: Command renamed from `meta` to `metadata` for clarity
 
 ### v0.1.0
 - Initial release
