@@ -75,11 +75,8 @@ fn print_arrow_field_recursive(
                 } else {
                     "├── "
                 };
-                let child_indent = if is_last_sibling {
-                    "        "
-                } else {
-                    "    │   "
-                };
+                // struct의 자식들에 대해서는 항상 일관된 들여쓰기 사용
+                let child_indent = if is_last_sibling { "    " } else { "│   " };
                 let full_prefix = format!("{}{}{}", base_indent, child_indent, child_prefix);
                 let next_base_indent = format!("{}{}", base_indent, child_indent);
                 print_arrow_field_recursive(
@@ -91,46 +88,18 @@ fn print_arrow_field_recursive(
             }
         }
         DataType::List(list_field) => {
-            let child_prefix = format!(
-                "{}{}└── ",
-                base_indent,
-                if is_last_sibling {
-                    "        "
-                } else {
-                    "    │   "
-                }
-            );
-            let next_base_indent = format!(
-                "{}{}",
-                base_indent,
-                if is_last_sibling {
-                    "        "
-                } else {
-                    "    │   "
-                }
-            );
-            print_arrow_field_recursive(list_field, &child_prefix, &next_base_indent, true);
+            let child_prefix = "└── ";
+            let child_indent = if is_last_sibling { "    " } else { "│   " };
+            let full_prefix = format!("{}{}{}", base_indent, child_indent, child_prefix);
+            let next_base_indent = format!("{}{}", base_indent, child_indent);
+            print_arrow_field_recursive(list_field, &full_prefix, &next_base_indent, true);
         }
         DataType::Map(map_field, _) => {
-            let child_prefix = format!(
-                "{}{}└── ",
-                base_indent,
-                if is_last_sibling {
-                    "        "
-                } else {
-                    "    │   "
-                }
-            );
-            let next_base_indent = format!(
-                "{}{}",
-                base_indent,
-                if is_last_sibling {
-                    "        "
-                } else {
-                    "    │   "
-                }
-            );
-            print_arrow_field_recursive(map_field, &child_prefix, &next_base_indent, true);
+            let child_prefix = "└── ";
+            let child_indent = if is_last_sibling { "    " } else { "│   " };
+            let full_prefix = format!("{}{}{}", base_indent, child_indent, child_prefix);
+            let next_base_indent = format!("{}{}", base_indent, child_indent);
+            print_arrow_field_recursive(map_field, &full_prefix, &next_base_indent, true);
         }
         _ => {}
     }
