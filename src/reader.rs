@@ -3,7 +3,8 @@ use arrow::record_batch::RecordBatch;
 use bytes::Bytes;
 use flate2::read::{GzDecoder, ZlibDecoder};
 use orc_rust::arrow_reader::ArrowReaderBuilder;
-use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
+use orc_rust::projection::ProjectionMask as OrcProjectionMask;
+use parquet::arrow::{ProjectionMask, arrow_reader::ParquetRecordBatchReaderBuilder};
 use snap::read::FrameDecoder as SnappyDecoder;
 use std::fs::File;
 use std::io::{BufReader, Read};
@@ -122,7 +123,10 @@ fn create_decompressed_reader(file_path: &str) -> Result<Box<dyn Read>> {
     }
 }
 
-pub fn read_parquet_to_arrow(file_path: &str) -> Result<ArrowBatchIterator> {
+pub fn read_parquet_to_arrow_with_projection(
+    file_path: &str,
+    columns: Option<Vec<String>>,
+) -> Result<ArrowBatchIterator> {
     let path = Path::new(file_path);
     if !path.exists() {
         return Err(anyhow::Error::msg(format!("File not found: {}", file_path)));
@@ -134,9 +138,31 @@ pub fn read_parquet_to_arrow(file_path: &str) -> Result<ArrowBatchIterator> {
         CompressionType::None => {
             // Read uncompressed file directly - streaming
             let file = File::open(&path).map_err(Error::new)?;
-            let builder = ParquetRecordBatchReaderBuilder::try_new(file).map_err(Error::new)?;
-            let reader = builder.build().map_err(Error::new)?;
+            let mut builder = ParquetRecordBatchReaderBuilder::try_new(file).map_err(Error::new)?;
 
+            // Apply column projection if specified
+            if let Some(column_names) = columns {
+                let schema = builder.schema();
+                let mut column_indices = Vec::new();
+
+                for column_name in &column_names {
+                    if let Some(index) =
+                        schema.fields().iter().position(|f| f.name() == column_name)
+                    {
+                        column_indices.push(index);
+                    } else {
+                        return Err(anyhow::Error::msg(format!(
+                            "Column '{}' not found in schema",
+                            column_name
+                        )));
+                    }
+                }
+
+                let projection = ProjectionMask::roots(builder.parquet_schema(), column_indices);
+                builder = builder.with_projection(projection);
+            }
+
+            let reader = builder.build().map_err(Error::new)?;
             Ok(ArrowBatchIterator::new_from_parquet_reader(reader))
         }
         _ => {
@@ -149,15 +175,41 @@ pub fn read_parquet_to_arrow(file_path: &str) -> Result<ArrowBatchIterator> {
                 .map_err(Error::new)?;
 
             let bytes = Bytes::from(buffer);
-            let builder = ParquetRecordBatchReaderBuilder::try_new(bytes).map_err(Error::new)?;
-            let reader = builder.build().map_err(Error::new)?;
+            let mut builder =
+                ParquetRecordBatchReaderBuilder::try_new(bytes).map_err(Error::new)?;
 
+            // Apply column projection if specified
+            if let Some(column_names) = columns {
+                let schema = builder.schema();
+                let mut column_indices = Vec::new();
+
+                for column_name in &column_names {
+                    if let Some(index) =
+                        schema.fields().iter().position(|f| f.name() == column_name)
+                    {
+                        column_indices.push(index);
+                    } else {
+                        return Err(anyhow::Error::msg(format!(
+                            "Column '{}' not found in schema",
+                            column_name
+                        )));
+                    }
+                }
+
+                let projection = ProjectionMask::roots(builder.parquet_schema(), column_indices);
+                builder = builder.with_projection(projection);
+            }
+
+            let reader = builder.build().map_err(Error::new)?;
             Ok(ArrowBatchIterator::new_from_parquet_reader(reader))
         }
     }
 }
 
-pub fn read_orc_to_arrow(file_path: &str) -> Result<ArrowBatchIterator> {
+pub fn read_orc_to_arrow_with_projection(
+    file_path: &str,
+    columns: Option<Vec<String>>,
+) -> Result<ArrowBatchIterator> {
     let path = Path::new(file_path);
     if !path.exists() {
         return Err(anyhow::Error::msg(format!("File not found: {}", file_path)));
@@ -167,9 +219,20 @@ pub fn read_orc_to_arrow(file_path: &str) -> Result<ArrowBatchIterator> {
 
     match compression {
         CompressionType::None => {
-            // Read uncompressed file directly - still need to collect for ORC
+            // Read uncompressed file directly
             let file = File::open(&path).map_err(Error::new)?;
             let reader_builder = ArrowReaderBuilder::try_new(file).map_err(Error::new)?;
+
+            // Apply column projection if specified
+            let reader_builder = if let Some(column_names) = columns {
+                let file_metadata = reader_builder.file_metadata();
+                let root_data_type = file_metadata.root_data_type();
+                let projection = OrcProjectionMask::named_roots(root_data_type, &column_names);
+                reader_builder.with_projection(projection)
+            } else {
+                reader_builder
+            };
+
             let mut reader = reader_builder.build();
 
             let mut batches = Vec::new();
@@ -194,6 +257,17 @@ pub fn read_orc_to_arrow(file_path: &str) -> Result<ArrowBatchIterator> {
 
             let bytes = Bytes::from(buffer);
             let reader_builder = ArrowReaderBuilder::try_new(bytes).map_err(Error::new)?;
+
+            // Apply column projection if specified
+            let reader_builder = if let Some(column_names) = columns {
+                let file_metadata = reader_builder.file_metadata();
+                let root_data_type = file_metadata.root_data_type();
+                let projection = OrcProjectionMask::named_roots(root_data_type, &column_names);
+                reader_builder.with_projection(projection)
+            } else {
+                reader_builder
+            };
+
             let mut reader = reader_builder.build();
 
             let mut batches = Vec::new();

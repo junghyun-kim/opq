@@ -23,7 +23,12 @@ A fast and efficient command-line tool for viewing, inspecting, and querying ORC
 ### Commands
 - **schema** - View file schema and structure
 - **meta** - View file metadata and statistics
-- **view** - View file contents with customizable output formats
+- **view** - View file contents with customizable output formats and column selection
+
+### Advanced Features
+- **Column Selection** - Choose specific columns for better performance and focused analysis
+- **Streaming Processing** - Memory-efficient handling of large files
+- **Auto-detection** - Automatic file type and compression format detection
 
 ## Installation
 
@@ -68,6 +73,12 @@ opq view --file data.orc --limit 20 --format vertical
 
 # Export to NDJSON format
 opq view --file data.parquet.gz --format ndjson --limit 100
+
+# Select specific columns for better performance
+opq view --file data.parquet --fields "id,name,email" --limit 10
+
+# Single column selection
+opq view --file data.parquet --fields "name" --format vertical --limit 5
 ```
 
 ### Output Format Examples
@@ -142,11 +153,14 @@ opq meta --file dataset.parquet
 # 3. Preview data in table format
 opq view --file dataset.parquet --limit 10
 
-# 4. For wide tables, use vertical format
+# 4. Select specific columns for analysis
+opq view --file dataset.parquet --fields "user_id,timestamp,event_type" --limit 20
+
+# 5. For wide tables, use vertical format
 opq view --file dataset.parquet --format vertical --limit 3
 
-# 5. Export sample to JSON for further processing
-opq view --file dataset.parquet --format ndjson --limit 1000 > sample.jsonl
+# 6. Export sample to JSON for further processing
+opq view --file dataset.parquet --fields "id,name,email" --format ndjson --limit 1000 > sample.jsonl
 ```
 
 ## Supported Data Types

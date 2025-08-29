@@ -7,7 +7,7 @@ use clap::{Parser, Subcommand};
 use output::{OutputFormat, print_arrow_batches};
 use reader::{
     FileType, get_file_type, get_orc_metadata, get_orc_schema, get_parquet_metadata,
-    get_parquet_schema, read_orc_to_arrow, read_parquet_to_arrow,
+    get_parquet_schema, read_orc_to_arrow_with_projection, read_parquet_to_arrow_with_projection,
 };
 
 #[derive(Parser)]
@@ -42,6 +42,9 @@ enum Commands {
         /// Output format
         #[arg(short = 'o', long, value_enum, default_value_t = OutputFormat::Table)]
         format: OutputFormat,
+        /// Select specific fields (comma-separated)
+        #[arg(long, value_delimiter = ',')]
+        fields: Option<Vec<String>>,
     },
 }
 
@@ -69,11 +72,12 @@ fn main() -> Result<()> {
             file,
             limit,
             format,
+            fields,
         } => {
             let file_type = get_file_type(file)?;
             let batch_iterator = match file_type {
-                FileType::Parquet => read_parquet_to_arrow(file)?,
-                FileType::Orc => read_orc_to_arrow(file)?,
+                FileType::Parquet => read_parquet_to_arrow_with_projection(file, fields.clone())?,
+                FileType::Orc => read_orc_to_arrow_with_projection(file, fields.clone())?,
             };
             print_arrow_batches(batch_iterator, *limit, format)
         }

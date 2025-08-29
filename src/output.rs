@@ -111,6 +111,7 @@ pub fn print_arrow_batches(
 
             for batch_result in batch_iterator {
                 let batch = batch_result?;
+
                 let rows_to_take = std::cmp::min(batch.num_rows(), limit - total_rows);
 
                 if rows_to_take > 0 {
@@ -137,6 +138,7 @@ pub fn print_arrow_batches(
 
             for batch_result in batch_iterator {
                 let batch = batch_result?;
+
                 let rows_to_take = std::cmp::min(batch.num_rows(), limit - total_rows);
 
                 if rows_to_take > 0 {
@@ -159,6 +161,7 @@ pub fn print_arrow_batches(
 
             for batch_result in batch_iterator {
                 let batch = batch_result?;
+
                 let rows_to_take = std::cmp::min(batch.num_rows(), limit - total_rows);
 
                 if rows_to_take > 0 {
