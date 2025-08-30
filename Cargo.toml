@@ -1,7 +1,11 @@
 [package]
-name = "opq"
+name = "opq-rs"
 version = "0.1.0"
 edition = "2024"
+
+[[bin]]
+name = "opq"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.82"
