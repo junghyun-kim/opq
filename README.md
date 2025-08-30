@@ -143,7 +143,7 @@ Schema Tree (parquet):
 
 ## Compression Support
 
-OPQ automatically detects compression based on file extensions:
+OPQ.RS automatically detects compression based on file extensions:
 
 | Compression | Extensions | Example |
 |-------------|------------|---------|
@@ -205,7 +205,7 @@ done
 
 ## Supported Data Types
 
-OPQ handles complex nested data structures including:
+OPQ.RS handles complex nested data structures including:
 - Primitive types (integers, floats, strings, booleans)
 - Nested structs with hierarchical tree visualization
 - Arrays and lists
@@ -231,7 +231,7 @@ OPQ handles complex nested data structures including:
 
 ### Large File Handling
 
-OPQ is designed to handle large files efficiently:
+OPQ.RS is designed to handle large files efficiently:
 
 #### ✅ **Uncompressed Files (Recommended for large datasets)**
 - **Streaming processing** - Only loads data as needed
