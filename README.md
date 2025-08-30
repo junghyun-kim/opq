@@ -1,4 +1,4 @@
-# OPQ (ORC Parquet Query)
+# OPQ.RS (ORC Parquet Query built with Rust)
 
 A fast and efficient command-line tool for viewing, inspecting, and querying ORC and Parquet files with comprehensive compression support.
 
