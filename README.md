@@ -1,5 +1,4 @@
 # opq.rs (ORC Parquet Query built with Rust)
-
 A fast and efficient command-line tool for viewing, inspecting, and querying ORC and Parquet files with comprehensive compression support.
 
 ## Features
@@ -271,9 +270,10 @@ opq view huge_file.parquet --limit 1000 --format ndjson > sample.jsonl
 4. Add tests if applicable
 5. Submit a pull request
 
+
 ## License
 
-[Add your license information here]
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Changelog
 
