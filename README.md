@@ -37,9 +37,10 @@ Note: Vertical format has been removed. Use table format for structured output o
 
 ## Installation
 
+
 ### From Source
 ```bash
-git clone <repository-url>
+git clone https://github.com/junghyun-kim/opq.rs.git
 cd opq.rs
 cargo build --release
 ```
