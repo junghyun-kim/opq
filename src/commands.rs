@@ -483,7 +483,6 @@ async fn process_orc_chunk(
     let mut stream = execution_plan.execute(0, task_ctx)?;
 
     let mut result_batches = Vec::new();
-    use futures::StreamExt;
 
     while let Some(batch_result) = stream.next().await {
         let batch = batch_result?;
