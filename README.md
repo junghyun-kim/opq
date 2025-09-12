@@ -23,7 +23,7 @@ Note: Vertical format has been removed. Use table format for structured output o
 ### Commands
 - **schema** - View file schema and structure with tree visualization support
 - **metadata** - View file metadata and statistics 
-- **view** - View file contents with customizable output formats and column selection
+- **view** - View file contents with customizable output formats, column selection, and intelligent sorting
 
 ### Advanced Features
 - **Tree Schema Visualization** - Hierarchical display of complex nested structures
@@ -32,6 +32,10 @@ Note: Vertical format has been removed. Use table format for structured output o
   - Supports top-level columns only (e.g., `name`, `age`, `address`)
   - Nested field selection (e.g., `address.city`) is not currently supported
   - Complex nested structures are returned as complete objects
+- **Intelligent Sorting** - Sort data by single or multiple columns with flexible syntax
+  - Adaptive strategy: TopK for small datasets, External Sort for large files
+  - Memory-efficient streaming processing for large files
+  - Multiple sort formats: `column`, `column+/-`, `column:asc/desc`
 - **Streaming Processing** - Memory-efficient handling of large files
 - **Auto-detection** - Automatic file type and compression format detection
 
@@ -97,6 +101,15 @@ opq view data.parquet --columns "name" --limit 5
 
 # Select nested structures as complete objects
 opq view nested_data.parquet --columns "id,address,metadata" --limit 5
+
+# Sort data by columns (ascending by default)
+opq view data.parquet --sort "name" --limit 10
+
+# Sort by multiple columns with different orders
+opq view data.parquet --sort "age-,name,salary:desc" --limit 20
+
+# Combine sorting with column selection
+opq view data.parquet --columns "name,age,salary" --sort "age-" --limit 15
 
 # Note: view command processes one file at a time
 # For multiple files, use separate commands:
@@ -180,9 +193,61 @@ opq view dataset.parquet --limit 10
 # 4. Select specific columns for analysis
 opq view dataset.parquet --columns "user_id,timestamp,event_type" --limit 20
 
-# 5. Export sample to JSON for further processing
+# 5. Sort data for better insights
+opq view dataset.parquet --columns "name,age,salary" --sort "age-,salary:desc" --limit 15
+
+# 6. Export sample to JSON for further processing
 opq view dataset.parquet --columns "id,name,email" --format ndjson --limit 1000 > sample.jsonl
 ```
+
+### Sorting Examples
+
+#### Basic Sorting
+```bash
+# Sort by single column (ascending by default)
+opq view employees.parquet --sort "name" --limit 20
+
+# Sort by single column (explicit ascending)
+opq view employees.parquet --sort "name+" --limit 20
+
+# Sort by single column (descending)
+opq view employees.parquet --sort "age-" --limit 20
+
+# Sort using explicit syntax
+opq view employees.parquet --sort "salary:desc" --limit 20
+```
+
+#### Multi-Column Sorting
+```bash
+# Sort by multiple columns (mixed orders)
+opq view employees.parquet --sort "department,age-,salary:desc" --limit 25
+
+# Priority: department (asc) → age (desc) → salary (desc)
+opq view employees.parquet --sort "department:asc,age:desc,salary:desc" --limit 30
+```
+
+#### Sorting with Column Selection
+```bash
+# Combine column selection and sorting
+opq view sales.parquet --columns "date,product,amount,region" --sort "date-,amount:desc" --limit 50
+
+# Focus on specific columns with relevant sorting
+opq view transactions.parquet --columns "timestamp,user_id,amount" --sort "timestamp-" --limit 100
+```
+
+#### Supported Sort Formats
+| Format | Description | Example |
+|--------|-------------|---------|
+| `column` | Ascending (default) | `--sort "name"` |
+| `column+` | Explicit ascending | `--sort "name+"` |
+| `column-` | Descending | `--sort "age-"` |
+| `column:asc` | Explicit ascending | `--sort "salary:asc"` |
+| `column:desc` | Explicit descending | `--sort "date:desc"` |
+
+#### Sorting Performance
+- **Small datasets (< 1000 rows)**: Uses TopK optimization for faster results
+- **Large datasets**: Uses external sorting with streaming for memory efficiency
+- **Memory usage**: Constant memory usage regardless of file size with streaming approach
 
 ### Working with Multiple Files
 ```bash
@@ -277,6 +342,17 @@ opq view huge_file.parquet --limit 1000 --format ndjson > sample.jsonl
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Changelog
+
+### v0.3.0 (Latest)
+- **New Feature**: Intelligent sorting functionality with adaptive strategy
+- **New Feature**: Support for multiple sort formats (`column`, `column+/-`, `column:asc/desc`)
+- **New Feature**: Multi-column sorting with mixed ascending/descending orders
+- **Enhancement**: TopK optimization for small result sets (< 1000 rows)
+- **Enhancement**: External sorting with DataFusion for large datasets
+- **Enhancement**: Memory-efficient streaming processing for sorted data
+- **Enhancement**: Async runtime with tokio for better performance
+- **Technical**: Added DataFusion integration for advanced query processing
+- **Technical**: Comprehensive sort validation and error handling
 
 ### v0.2.0
 - **Breaking Changes**: Simplified CLI interface - removed `--file` flag, files are now positional arguments
