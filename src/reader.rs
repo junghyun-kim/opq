@@ -1,6 +1,7 @@
 use anyhow::{Error, Result};
 use arrow::record_batch::RecordBatch;
 use arrow_schema::Schema as ArrowSchema;
+// No longer need compatibility layer since we simplified the approach
 use bytes::Bytes;
 use flate2::read::{GzDecoder, ZlibDecoder};
 use orc_rust::arrow_reader::ArrowReaderBuilder;

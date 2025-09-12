@@ -151,8 +151,6 @@ fn format_arrow_data_type(data_type: &DataType) -> String {
                 format_arrow_data_type(value_type)
             )
         }
-        DataType::Decimal32(precision, scale) => format!("DECIMAL32({}, {})", precision, scale),
-        DataType::Decimal64(precision, scale) => format!("DECIMAL64({}, {})", precision, scale),
         DataType::Decimal128(precision, scale) => format!("DECIMAL128({}, {})", precision, scale),
         DataType::Decimal256(precision, scale) => format!("DECIMAL256({}, {})", precision, scale),
         DataType::Map(_, sorted) => format!("MAP({})", if *sorted { "sorted" } else { "unsorted" }),
