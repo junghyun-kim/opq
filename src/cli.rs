@@ -50,5 +50,8 @@ pub enum Commands {
         /// Truncate long column values (0 to disable, default: disabled)
         #[arg(short, long, default_value_t = 0)]
         truncate: usize,
+        /// Sort columns. Format: "col1,col2-,col3:desc" (default: ascending)
+        #[arg(short, long, value_delimiter = ',')]
+        sort: Option<Vec<String>>,
     },
 }

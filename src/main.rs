@@ -3,13 +3,15 @@ mod commands;
 mod output;
 mod reader;
 mod schema;
+mod sort;
 
 use anyhow::Result;
 use clap::Parser;
 use cli::{Cli, Commands};
 use commands::{handle_metadata_command, handle_schema_command, handle_view_command};
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
@@ -21,6 +23,7 @@ fn main() -> Result<()> {
             limit,
             format,
             truncate,
-        } => handle_view_command(file, columns, *limit, format, *truncate),
+            sort,
+        } => handle_view_command(file, columns, *limit, format, *truncate, sort).await,
     }
 }
