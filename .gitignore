@@ -97,3 +97,10 @@ PRD.md
 
 # Test output
 test_output/
+
+# Python
+venv/
+.mypy_cache/
+
+# Claude AI
+.claude/
