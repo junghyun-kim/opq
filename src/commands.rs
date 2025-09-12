@@ -469,6 +469,9 @@ async fn process_orc_chunk(
     }
 
     // Apply limit to chunk (take more than needed for final merge)
+    // We fetch twice the requested limit per chunk to ensure that, after sorting and merging,
+    // we have enough records to satisfy the final limit. This helps account for possible
+    // overlaps or ordering changes across chunks during the merge phase.
     let chunk_limit = if limit > 0 { limit * 2 } else { 0 };
     if chunk_limit > 0 {
         chunk_df = chunk_df.limit(0, Some(chunk_limit))?;
